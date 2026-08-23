@@ -1,0 +1,61 @@
+{% extends 'livros/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-3 align-items-center">
+        <div class="col-md-4">
+            <h2>Acervo de Livros</h2>
+        </div>
+        <div class="col-md-4">
+            <form method="GET" class="d-flex gap-2">
+                <input type="text" name="q" class="form-control" placeholder="Buscar por título..." value="{{ query }}">
+                <button type="submit" class="btn btn-primary">Buscar</button>
+                {% if query %}
+                <a href="{% url 'lista_livros' %}" class="btn btn-outline-secondary">Limpar</a>
+                {% endif %}
+            </form>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'solicitar_emprestimo' %}" class="btn btn-success">📖 Solicitar Empréstimo</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table table-striped align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Título</th>
+                        <th>Autor</th>
+                        <th>Editora</th>
+                        <th>Ano</th>
+                        <th>Qtd</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for livro in livros %}
+                    <tr>
+                        <td>{{ livro.titulo }}</td>
+                        <td>{{ livro.autor }}</td>
+                        <td>{{ livro.editora }}</td>
+                        <td>{{ livro.ano_publicacao }}</td>
+                        <td>{{ livro.quantidade_exemplares }}</td>
+                        <td>
+                            {% if livro.disponivel %}
+                                <span class="badge bg-success">Disponível</span>
+                            {% else %}
+                                <span class="badge bg-danger">Indisponível</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">Nenhum livro cadastrado no sistema.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
