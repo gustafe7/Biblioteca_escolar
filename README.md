@@ -22,7 +22,7 @@ Contém apenas o app livros (models, views, admin, urls) — falta settings.py, 
 
 # Stacks utilizadas 
 
--Python 
+- Python 
 - Django 
 - Django ORM 
 - Django Admin 
