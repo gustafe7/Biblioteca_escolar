@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import Livro, Pessoa, Emprestimo, MensagemSuporte
 import requests
 from django.contrib import messages
+import random
 
 def index(request):
     return render(request, 'livros/index.html')
@@ -106,26 +107,66 @@ def historico_usuario(request):
         'erro': erro,
     })
 
+AUTORES_BRASILEIROS = [
+    'Machado de Assis', 'Jorge Amado', 'Clarice Lispector', 'Carlos Drummond de Andrade',
+    'Guimarães Rosa', 'José de Alencar', 'Monteiro Lobato', 'Graciliano Ramos',
+    'Rachel de Queiroz', 'Lygia Fagundes Telles', 'Paulo Coelho', 'Cecília Meireles',
+    'Euclides da Cunha', 'Aluísio Azevedo', 'Lima Barreto', 'Érico Veríssimo',
+    'Ariano Suassuna', 'Raduan Nassar', 'Rubem Fonseca', 'Nelson Rodrigues',
+    'Ferreira Gullar', 'Manuel Bandeira', 'Olavo Bilac', 'Castro Alves',
+    'Chico Buarque', 'Ana Maria Machado', 'Ruth Rocha', 'Ziraldo',
+]
+
+TITULOS_MANGA = [
+    'Naruto', 'Dragon Ball', 'One Piece', 'Attack on Titan', 'Death Note',
+    'Bleach', 'Demon Slayer', 'My Hero Academia', 'Fullmetal Alchemist',
+    'Jujutsu Kaisen', 'Tokyo Ghoul', 'Sailor Moon',
+]
+
 def buscar_livro_api(request):
     resultados = []
     query = request.GET.get('q')
 
     if query:
-        url = f"https://openlibrary.org/search.json?q={query}&limit=12"
+        autor_query = ' OR '.join(f'"{a}"' for a in AUTORES_BRASILEIROS)
+        url = (
+            f'https://openlibrary.org/search.json?q={query}'
+            f'+AND+(author:({autor_query})+OR+title:({query}))'
+            f'+AND+language:por'
+            f'&limit=40'
+        )
     else:
-        url = "https://openlibrary.org/search.json?q=subject:fiction&sort=random&limit=12"
+        if random.choice(['autor', 'manga']) == 'autor':
+            autor_sorteado = random.choice(AUTORES_BRASILEIROS)
+            url = f'https://openlibrary.org/search.json?author={autor_sorteado}&language=por&limit=40'
+        else:
+            manga_sorteado = random.choice(TITULOS_MANGA)
+            url = f'https://openlibrary.org/search.json?title={manga_sorteado}&language=por&limit=40'
 
-    resp = requests.get(url).json()
+    erro = None
+    try:
+        resp = requests.get(url, timeout=5).json()
+    except requests.exceptions.RequestException:
+        resp = {}
+        erro = "Não foi possível conectar à Open Library no momento."
+
     for item in resp.get('docs', []):
         capa_id = item.get('cover_i')
+        if not capa_id:
+            continue
+
         resultados.append({
             'titulo': item.get('title', ''),
             'autor': ', '.join(item.get('author_name', [])),
             'editora': ', '.join(item.get('publisher', [])[:1]) if item.get('publisher') else '',
             'ano': item.get('first_publish_year', ''),
-            'capa': f"https://covers.openlibrary.org/b/id/{capa_id}-M.jpg" if capa_id else '',
+            'capa': f"https://covers.openlibrary.org/b/id/{capa_id}-M.jpg",
         })
-    return render(request, 'livros/buscar_api.html', {'resultados': resultados, 'query': query})
+
+        if len(resultados) >= 12:
+            break
+
+    return render(request, 'livros/buscar_api.html', {'resultados': resultados, 'query': query, 'erro': erro})
 
 def cadastrar_via_api(request):
     if request.method == 'POST':
